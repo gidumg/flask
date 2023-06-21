@@ -45,7 +45,6 @@ def upload_file():
 def process_file(filename):
 
     file_list = pd.read_excel(filename, header=0, sheet_name=0)
-    find_prokit = file_list
 
 
     #######################################################################
@@ -53,8 +52,8 @@ def process_file(filename):
 
     # SQL에서 프로킷 / 컴스마트 정보 가져오기
 
-    engine = create_engine(f'mysql+pymysql://fred:{password}@fred1234.synology.me/fred?database=fred')
-    query = """select `주문코드`, `바코드`, `상품명`, `모델명`, `총재고(H)`, `허브매장(U)`, `본사재고(B)`, `판매가`, ` 상품이미지1`  from comsmart_web """
+    engine = create_engine(f'mysql+pymysql://fred:{password}@fred1234.synology.me/fred')
+    query = """select `주문코드`, `바코드`, `상품명`, `모델명`, `총재고(H)`, `허브매장(U)`, `본사재고(B)`, `판매가`, `도매가`,`파트너가`,` 상품이미지1`  from comsmart_web """
     comsmart_df = pd.read_sql(query, con=engine)
 
     find_items = file_list.merge(comsmart_df, on="주문코드", how="left")
@@ -65,9 +64,11 @@ def process_file(filename):
     find_items['허브매장(U)']  = find_items["허브매장(U)"].astype("Int64")
     find_items['본사재고(B)']  = find_items["본사재고(B)"].astype("Int64")
     find_items['판매가']  = find_items["판매가"].astype("Int64")
+    find_items['도매가']  = find_items["도매가"].astype("Int64")
+    find_items['파트너가']  = find_items["파트너가"].astype("Int64")
 
 
-    find_items2 = find_items[['주문코드', '바코드', '상품명', '총재고(H)', '허브매장(U)','본사재고(B)','판매가', ' 상품이미지1' ]]
+    find_items2 = find_items[['주문코드', '바코드', '상품명', '총재고(H)', '허브매장(U)','본사재고(B)','판매가','도매가','파트너가', ' 상품이미지1' ]]
 
 
     # 각 이미지 링크를 HTML 이미지 태그로 변환
@@ -104,4 +105,4 @@ def process_file(filename):
     #######################################################################
 
 if __name__ == "__main__":
-    app.run(port=5000)
+    app.run(host="0.0.0.0", port=5000)
