@@ -66,6 +66,13 @@
             <input type="submit" value="정보 찾기">
         </form>
         
+        <form method="POST" action="/">
+            <input type="text" name="model_name" placeholder="Enter model name">
+            <button type="submit">Process</button>
+        </form>
+
+
+        
         {% if result %}
         <h2>결과값은?</h2>
         <pre>{{ result }}</pre>

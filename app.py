@@ -41,11 +41,32 @@ def upload_file():
     return render_template('index.html', result=result)
 
 
+def search_based_on_model(model_name):
+    # SQL에서 모델 정보 가져오기
+    engine = create_engine(f'mysql+pymysql://fred:{password}@fred1234.synology.me/fred')
+    query = f"""select * from comsmart_web where `모델명` = '{model_name}'"""
+    df = pd.read_sql(query, con=engine)
+
+    # 데이터프레임을 HTML로 변환
+    html = df.to_html()
+
+    return Markup(html)
+
+
+@app.route('/search', methods=['POST'])
+def search_model():
+    model_name = request.form.get('model_name')
+
+    # Assuming that you have a function to handle the search based on model_name
+    result = search_based_on_model(model_name)
+
+    return render_template('index.html', result=result)
+
+
 
 def process_file(filename):
 
     file_list = pd.read_excel(filename, header=0, sheet_name=0)
-
 
     #######################################################################
     password = quote_plus('!!@Ll752515')
