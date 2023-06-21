@@ -7,6 +7,9 @@ import requests
 from tqdm import tqdm
 from requests.exceptions import MissingSchema
 from bs4 import BeautifulSoup
+from sqlalchemy import create_engine
+from urllib.parse import quote_plus
+import pandas as pd
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -35,125 +38,88 @@ def upload_file():
         os.remove(file_path)  # delete file after processing
 
     else:
-        result = "No file uploaded"
+        result = "아직 파일이 업로드 되지 않았습니다."
 
     return render_template('index.html', result=result)
 
+
+
 def process_file(filename):
 
-    file_list = pd.read_excel(filename)
-
-    login_url = "https://comsmart.co.kr/cmart/bbs/login_check.php"
-    username = "fred"
-    password = "123"
-
-    payload = {
-        'mb_id': username,
-        'mb_password': password
-    }
-
-    session = requests.Session()
-    res = session.post(login_url, data=payload)
-
-    final_model_name = []
-    final_link_address = []
-    final_description_list = []
-    final_access_link_list = []
-    final_stock_list = []
-
-    for r in tqdm(range(len(file_list))):
-        url = "https://www.comsmart.co.kr/cmart/shop/search.php?wk=&q="
-        item_name = str(file_list.loc[r, '모델명'])
-        url_link = url + item_name
-        comsmart = session.get(url_link)
-        soup = BeautifulSoup(comsmart.text, 'html.parser')
-
-        table = soup.select("div.tgslider")
-
-        model_name = []
-        image_link = []
-        description_list = []
-        access_link_list = []
+    file_list = pd.read_excel(filename, header=0, sheet_name=0)
+    find_prokit = file_list
 
 
-        for i in table:
-            for e in i.select("div.red.it_5") :
-                model = e.get_text().replace("[","").replace("]","").strip()
-                model_name.append(model)
+    #######################################################################
 
-        for i in table:
-            for e in i.select("div.inner_inner img") :
-                link = e['src']
-                image_link.append(link)
+    password = quote_plus('!!@Ll752515')
 
-        for i in table :
-            for e in i.select("div.it_name") :
-                description = e.get_text()
-                description_list.append(description)
+    # SQL에서 프로킷 / 컴스마트 정보 가져오기
 
-        for i in table :
-            for e in i.select("div.inner_inner a") :
-                access_link = e['href']
-                access_link_list.append(access_link)
-
-        df = pd.DataFrame({"모델명" : model_name, "링크주소" : image_link, "상세정보" : description_list, "접속링크" : access_link_list})
+    engine = create_engine(f'mysql+pymysql://fred:{password}@fred1234.synology.me/fred')
+    query = """select `주문코드`, `바코드`, `상품명`, `모델명`, `총재고(H)`, `허브매장(U)`, `본사재고(B)`, `판매가`, ` 상품이미지1`  from comsmart_web """
+    comsmart_df = pd.read_sql(query, con=engine)
 
 
-        image_link_address = df[df['모델명']  == item_name]['링크주소']
-        if not image_link_address.empty:
-            image_link_address = image_link_address.values[0]
-        else:
-            image_link_address = ""
-
-        description_list_df = df[df['모델명']  == item_name]['상세정보']
-        if not description_list_df.empty:
-            description_list_df = description_list_df.values[0]
-        else:
-            description_list_df = ""
-
-        access_link_list_df = df[df['모델명']  == item_name]['접속링크']
-        if not access_link_list_df.empty:
-            access_link_list_df = access_link_list_df.values[0]
-        else:
-            access_link_list_df = ""
+    engine = create_engine(f'mysql+pymysql://fred:{password}@fred1234.synology.me/fred')
+    query = """select * from prokit """
+    prokit_df = pd.read_sql(query, con=engine)
+    engine.dispose()
 
 
+    # prokit 데이터프레임 정리하기
+    prokit_df = prokit_df[['item_name', 'description','price','location','invoice_number','date','po']]
 
-        try : 
-            product_url = access_link_list_df
-            stock = session.get(product_url)
-            soup = BeautifulSoup(stock.text, 'html.parser')
-            access_link_table = soup.select("#goods_price_inner tr")
-
-            for i in access_link_table :
-                for e in i.select("#erpchk") :
-                    stocks = e.get_text().split()
-                    if stocks[0] == "총재고" :
-                        total_stocks = stocks[2]
-                        
-        except MissingSchema:
-            total_stocks = ""
+    # 열값 변경, 오름차순 정렬, date를 기준으로 가장 최근값 정렬, 2차 재정렬 = prokit_html_df
+    prokit_df = prokit_df.rename(columns={'item_name' : '모델명'})
+    prokit_df = prokit_df[prokit_df['모델명'].notna() & prokit_df['date'].notna()]  # 모델명과 date 모두 NaN 값이 아닌 행만 선택
+    prokit_df = prokit_df.sort_values("date", ascending=False)
+    idx = prokit_df.groupby("모델명")['date'].idxmax()
+    prokit_df_latest = prokit_df.loc[idx]
+    prokit_html_df = prokit_df_latest[['모델명','description','price','location']]
 
 
-        final_model_name.append(item_name)
-        final_link_address.append(image_link_address)
-        final_description_list.append(description_list_df)
-        final_stock_list.append(total_stocks)
+    prokit_html = find_prokit.merge(comsmart_df, on="모델명", how="left")
+    prokit_html2 = prokit_html.merge(prokit_html_df, on="모델명", how="left")
+    prokit_html2 = prokit_html2[['주문코드', '모델명', '바코드', '상품명','description', '총재고(H)', '허브매장(U)','본사재고(B)','판매가','price', 'location', ' 상품이미지1' ]]
 
-    final_df = pd.DataFrame( {"모델명" : final_model_name, "상세정보" : final_description_list, "총재고" : final_stock_list, "이미지주소" : final_link_address})
+    prokit_html2 = prokit_html2.fillna("")
 
 
     from IPython.display import display, HTML
 
     # 각 이미지 링크를 HTML 이미지 태그로 변환
-    final_df['이미지주소'] = final_df['이미지주소'].apply(lambda x: f'<img src="{x}" width="100">')
+    prokit_html2[' 상품이미지1'] = prokit_html2[' 상품이미지1'].apply(lambda x: f'<img src="{x}" width="100">')
     # 데이터프레임을 HTML로 변환
-    html = final_df.to_html(escape=False)
+    html = prokit_html2.to_html(escape=False)
 
-    #with open('output.html', 'w') as f:
-    #    f.write(html)
+    css_style = """
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #ddd;
+        }
+    </style>
+    """
 
-    return Markup(html)
+    # CSS 스타일을 HTML에 적용합니다.
+    html_with_style = css_style + html
+
+    return Markup(html_with_style)
+
+
+    #######################################################################
 
 if __name__ == "__main__":
     app.run(port=5000)

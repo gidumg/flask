@@ -1,17 +1,74 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Upload File</title>
+        <title>엑셀 파일을 업로드 해 주세요.</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #fffff0;
+                margin: 0;
+                padding: 20px;
+            }
+
+            h1 {
+                text-align: center;
+                color: #333;
+            }
+
+            form {
+                max-width: 400px;
+                margin: 20px auto;
+                padding: 20px;
+                background-color: #D6D6D6;
+                border-radius: 5px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            input[type="file"] {
+                display: block;
+                margin-bottom: 10px;
+            }
+
+            input[type="submit"] {
+                background-color: #4caf50;
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                font-size: 16px;
+                cursor: pointer;
+            }
+
+            h2 {
+                margin-top: 20px;
+                color: #333;
+            }
+
+            pre {
+                background-color: #D6D6D5;
+                padding: 10px;
+                overflow-x: auto;
+                white-space: normal; /* 결과값 줄바꿈 방지 */
+            }
+
+            /* 미디어 쿼리를 사용하여 화면 크기에 따라 결과값 스타일 변경 */
+            @media (max-width: 600px) {
+                pre {
+                    font-size: 14px;
+                    padding: 5px;
+                }
+            }
+        </style>
     </head>
     <body>
-        <h1>Upload your Excel file</h1>
+        <h1>엑셀 파일을 업로드해 주세요</h1>
         <form method="POST" action="/" enctype="multipart/form-data">
-            <p><input type="file" name="file"></p>
-            <p><input type="submit" value="Upload"></p>
+            <input type="file" name="file">
+            <input type="submit" value="정보 찾기">
         </form>
+        
         {% if result %}
-        <h2>Results:</h2>
-        {{ result | safe }}
+        <h2>결과값은?</h2>
+        <pre>{{ result }}</pre>
         {% endif %}
     </body>
 </html>
