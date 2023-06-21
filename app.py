@@ -51,7 +51,6 @@ def process_file(filename):
 
 
     #######################################################################
-
     password = quote_plus('!!@Ll752515')
 
     # SQL에서 프로킷 / 컴스마트 정보 가져오기
@@ -60,38 +59,25 @@ def process_file(filename):
     query = """select `주문코드`, `바코드`, `상품명`, `모델명`, `총재고(H)`, `허브매장(U)`, `본사재고(B)`, `판매가`, ` 상품이미지1`  from comsmart_web """
     comsmart_df = pd.read_sql(query, con=engine)
 
+    find_items = file_list.merge(comsmart_df, on="주문코드", how="left")
 
-    engine = create_engine(f'mysql+pymysql://fred:{password}@fred1234.synology.me/fred')
-    query = """select * from prokit """
-    prokit_df = pd.read_sql(query, con=engine)
-    engine.dispose()
-
-
-    # prokit 데이터프레임 정리하기
-    prokit_df = prokit_df[['item_name', 'description','price','location','invoice_number','date','po']]
-
-    # 열값 변경, 오름차순 정렬, date를 기준으로 가장 최근값 정렬, 2차 재정렬 = prokit_html_df
-    prokit_df = prokit_df.rename(columns={'item_name' : '모델명'})
-    prokit_df = prokit_df[prokit_df['모델명'].notna() & prokit_df['date'].notna()]  # 모델명과 date 모두 NaN 값이 아닌 행만 선택
-    prokit_df = prokit_df.sort_values("date", ascending=False)
-    idx = prokit_df.groupby("모델명")['date'].idxmax()
-    prokit_df_latest = prokit_df.loc[idx]
-    prokit_html_df = prokit_df_latest[['모델명','description','price','location']]
+    find_items['총재고(H)']  = find_items["총재고(H)"].str.replace("품절","0")
+    find_items['총재고(H)']  = find_items["총재고(H)"].str.replace(",","")
+    find_items['총재고(H)']  = find_items["총재고(H)"].astype("Int64")
+    find_items['허브매장(U)']  = find_items["허브매장(U)"].astype("Int64")
+    find_items['본사재고(B)']  = find_items["본사재고(B)"].astype("Int64")
+    find_items['판매가']  = find_items["판매가"].astype("Int64")
 
 
-    prokit_html = find_prokit.merge(comsmart_df, on="모델명", how="left")
-    prokit_html2 = prokit_html.merge(prokit_html_df, on="모델명", how="left")
-    prokit_html2 = prokit_html2[['주문코드', '모델명', '바코드', '상품명','description', '총재고(H)', '허브매장(U)','본사재고(B)','판매가','price', 'location', ' 상품이미지1' ]]
-
-    prokit_html2 = prokit_html2.fillna("")
+    find_items2 = find_items[['주문코드', '바코드', '상품명', '총재고(H)', '허브매장(U)','본사재고(B)','판매가', ' 상품이미지1' ]]
 
 
     from IPython.display import display, HTML
 
     # 각 이미지 링크를 HTML 이미지 태그로 변환
-    prokit_html2[' 상품이미지1'] = prokit_html2[' 상품이미지1'].apply(lambda x: f'<img src="{x}" width="100">')
+    find_items2[' 상품이미지1'] = find_items2[' 상품이미지1'].apply(lambda x: f'<img src="{x}" width="100">')
     # 데이터프레임을 HTML로 변환
-    html = prokit_html2.to_html(escape=False)
+    html = find_items2.to_html(escape=False)
 
     css_style = """
     <style>
