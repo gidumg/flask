@@ -3,13 +3,11 @@ from markupsafe import Markup
 import pandas as pd
 import os
 import logging
-import requests
-from tqdm import tqdm
-from requests.exceptions import MissingSchema
-from bs4 import BeautifulSoup
 from sqlalchemy import create_engine
 from urllib.parse import quote_plus
 import pandas as pd
+from IPython.display import display, HTML
+import pymysql
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -27,7 +25,7 @@ def upload_file():
         result = ""
         if uploaded_file.filename != '':
             # Ensure the upload directory exists
-            upload_dir = 'C:\\Users\\Owner\\Documents\\GitHub\\Flask\\uploads'
+            upload_dir = os.path.join(app.root_path, 'uploads')
             if not os.path.exists(upload_dir):
                 os.makedirs(upload_dir)
         
@@ -55,7 +53,7 @@ def process_file(filename):
 
     # SQL에서 프로킷 / 컴스마트 정보 가져오기
 
-    engine = create_engine(f'mysql+pymysql://fred:{password}@fred1234.synology.me/fred')
+    engine = create_engine(f'mysql+pymysql://fred:{password}@fred1234.synology.me/fred?database=fred')
     query = """select `주문코드`, `바코드`, `상품명`, `모델명`, `총재고(H)`, `허브매장(U)`, `본사재고(B)`, `판매가`, ` 상품이미지1`  from comsmart_web """
     comsmart_df = pd.read_sql(query, con=engine)
 
@@ -71,8 +69,6 @@ def process_file(filename):
 
     find_items2 = find_items[['주문코드', '바코드', '상품명', '총재고(H)', '허브매장(U)','본사재고(B)','판매가', ' 상품이미지1' ]]
 
-
-    from IPython.display import display, HTML
 
     # 각 이미지 링크를 HTML 이미지 태그로 변환
     find_items2[' 상품이미지1'] = find_items2[' 상품이미지1'].apply(lambda x: f'<img src="{x}" width="100">')
