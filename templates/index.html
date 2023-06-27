@@ -1,7 +1,26 @@
 <!DOCTYPE html>
+
 <html>
+    <link rel = "stylesheet" href="{{url_for('static', filename='bootstrap.min.css')}}">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('main.upload_file') }}">메인화면</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+                <div class="navbar-nav">
+                    <a class="nav-link active" aria-current="page" href="#">PROKIT</a>
+                    <a class="nav-link" href="#">Features</a>
+                    <a class="nav-link" href="#">Pricing</a>
+                    <a class="nav-link disabled">Disabled</a>
+                </div>
+            </div>
+        </div>
+    </nav>
     <head>
         <title>엑셀 파일을 업로드 해 주세요.</title>
+
         <style>
             body {
                 font-family: Arial, sans-serif;
@@ -60,15 +79,18 @@
         </style>
     </head>
     <body>
+
+
         <h1>엑셀 파일을 업로드해 주세요</h1>
-        <form method="POST" action="/" enctype="multipart/form-data">
+        <form method="POST" action="{{ url_for('main.upload_file') }}" enctype="multipart/form-data">
             <input type="file" name="file">
             <input type="submit" value="정보 찾기">
         </form>
         
-        <form method="POST" action="search">
+        <form method="POST" action="{{ url_for('main.search_model') }}">
             <input type="text" name="model_name" placeholder="Enter model name">
             <button type="submit">개별품목찾기</button>
+            
         </form>
 
 
